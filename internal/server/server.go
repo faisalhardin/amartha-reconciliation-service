@@ -9,7 +9,7 @@ import (
 
 	_ "github.com/joho/godotenv/autoload"
 
-	"amartha-reconciliation-service/internal/database"
+	"github.com/faisalhardin/amartha-reconciliation-service/internal/database"
 )
 
 type Server struct {

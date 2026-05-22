@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"amartha-reconciliation-service/internal/server"
+	"github.com/faisalhardin/amartha-reconciliation-service/internal/server"
 )
 
 func gracefulShutdown(apiServer *http.Server, done chan bool) {
