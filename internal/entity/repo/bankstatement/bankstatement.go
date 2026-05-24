@@ -13,4 +13,5 @@ type BankStatementDB interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.MstBankStatement, error)
 	GetByUniqueIdentifier(ctx context.Context, uniqueID string) (*model.MstBankStatement, error)
 	List(ctx context.Context, limit, offset int) ([]model.MstBankStatement, error)
+	ListByFileID(ctx context.Context, fileID string) ([]model.MstBankStatement, error)
 }

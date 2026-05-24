@@ -12,4 +12,5 @@ type TransactionDB interface {
 	InsertBatch(ctx context.Context, txs []model.MstTransaction) error
 	GetByID(ctx context.Context, bankCode string, id uuid.UUID) (*model.MstTransaction, error)
 	List(ctx context.Context, bankCode string, limit, offset int) ([]model.MstTransaction, error)
+	ListByBankCodeAndTimeRange(ctx context.Context, bankCode string, start, end int64) ([]model.MstTransaction, error)
 }

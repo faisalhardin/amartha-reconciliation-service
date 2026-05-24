@@ -12,20 +12,29 @@ import (
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/config"
 	entityhttp "github.com/faisalhardin/amartha-reconciliation-service/internal/entity/http"
 	bankstatementhandler "github.com/faisalhardin/amartha-reconciliation-service/internal/http/bankstatement"
+	reconciliationhandler "github.com/faisalhardin/amartha-reconciliation-service/internal/http/reconciliation"
 	transactionhandler "github.com/faisalhardin/amartha-reconciliation-service/internal/http/transaction"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/library/db/xorm"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/messaging"
 	bankstatementrepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/bankstatement"
 	bankstatementfilerepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/bankstatementfile"
+	reconciliationrepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/reconciliation"
 	transactionrepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/transaction"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/server"
 	bankstatementfileuc "github.com/faisalhardin/amartha-reconciliation-service/internal/usecase/bankstatementfile"
 	bankstatementprocessuc "github.com/faisalhardin/amartha-reconciliation-service/internal/usecase/bankstatementprocess"
+	reconciliationuc "github.com/faisalhardin/amartha-reconciliation-service/internal/usecase/reconciliation"
 	transactionuc "github.com/faisalhardin/amartha-reconciliation-service/internal/usecase/transaction"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/worker"
 )
 
-func gracefulShutdown(apiServer *http.Server, workerCancel context.CancelFunc, queue *messaging.BankStatementProcessQueue, done chan bool) {
+func gracefulShutdown(
+	apiServer *http.Server,
+	workerCancel context.CancelFunc,
+	processQueue *messaging.BankStatementProcessQueue,
+	reconciliationQueue *messaging.ReconciliationQueue,
+	done chan bool,
+) {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -41,7 +50,8 @@ func gracefulShutdown(apiServer *http.Server, workerCancel context.CancelFunc, q
 	}
 
 	workerCancel()
-	queue.Close()
+	processQueue.Close()
+	reconciliationQueue.Close()
 
 	log.Println("Server exiting")
 	done <- true
@@ -63,29 +73,44 @@ func main() {
 		}
 	}()
 
-	queue := messaging.NewBankStatementProcessQueue(100)
+	processQueue := messaging.NewBankStatementProcessQueue(100)
+	reconciliationQueue := messaging.NewReconciliationQueue(100)
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	defer workerCancel()
 
 	transactionDB := transactionrepo.NewTransactionDB(conn)
 	bankStatementFileDB := bankstatementfilerepo.NewBankStatementFileDB(conn)
 	bankStatementDB := bankstatementrepo.NewBankStatementDB(conn)
+	reconciliationDB := reconciliationrepo.NewReconciliationDB(conn)
 
-	processUC := bankstatementprocessuc.NewBankStatementProcessUC(bankStatementFileDB, bankStatementDB)
-	worker.StartBankStatementWorker(workerCtx, queue, processUC)
+	reconciliationUC := reconciliationuc.NewReconciliationUC(
+		bankStatementFileDB,
+		bankStatementDB,
+		transactionDB,
+		reconciliationDB,
+	)
+
+	processUC := bankstatementprocessuc.NewBankStatementProcessUC(
+		bankStatementFileDB,
+		bankStatementDB,
+		reconciliationQueue,
+	)
+	worker.StartBankStatementWorker(workerCtx, processQueue, processUC)
+	worker.StartReconciliationWorker(workerCtx, reconciliationQueue, reconciliationUC)
 
 	transactionUC := transactionuc.NewTransactionUC(transactionDB)
-	bankStatementFileUC := bankstatementfileuc.NewBankStatementFileUC(bankStatementFileDB, queue)
+	bankStatementFileUC := bankstatementfileuc.NewBankStatementFileUC(bankStatementFileDB, processQueue)
 
 	handlers := &entityhttp.Handlers{
-		TransactionHandler:   transactionhandler.New(transactionUC),
-		BankStatementHandler: bankstatementhandler.New(bankStatementFileUC),
+		TransactionHandler:    transactionhandler.New(transactionUC),
+		BankStatementHandler:  bankstatementhandler.New(bankStatementFileUC),
+		ReconciliationHandler: reconciliationhandler.New(reconciliationUC),
 	}
 
 	apiServer := server.NewServer(handlers)
 
 	done := make(chan bool, 1)
-	go gracefulShutdown(apiServer, workerCancel, queue, done)
+	go gracefulShutdown(apiServer, workerCancel, processQueue, reconciliationQueue, done)
 
 	err = apiServer.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {

@@ -78,3 +78,14 @@ func (d *bankStatementDB) List(ctx context.Context, limit, offset int) ([]model.
 	}
 	return rows, nil
 }
+
+func (d *bankStatementDB) ListByFileID(ctx context.Context, fileID string) ([]model.MstBankStatement, error) {
+	var rows []model.MstBankStatement
+	err := d.conn.MasterDB.Context(ctx).
+		Where("id_bank_statement_file = ?", fileID).
+		Find(&rows)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, errors.Wrap(err, wrapErrMsgPrefix+"ListByFileID")
+	}
+	return rows, nil
+}

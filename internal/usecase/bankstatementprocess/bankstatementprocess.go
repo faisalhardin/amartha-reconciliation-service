@@ -9,6 +9,7 @@ import (
 	bankstatementrepo "github.com/faisalhardin/amartha-reconciliation-service/internal/entity/repo/bankstatement"
 	bankstatementfilerepo "github.com/faisalhardin/amartha-reconciliation-service/internal/entity/repo/bankstatementfile"
 	bankstatementprocessuc "github.com/faisalhardin/amartha-reconciliation-service/internal/entity/usecase/bankstatementprocess"
+	"github.com/faisalhardin/amartha-reconciliation-service/internal/messaging"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
@@ -16,17 +17,20 @@ import (
 const wrapErrMsg = "BankStatementProcessUC."
 
 type bankStatementProcessUC struct {
-	fileRepo bankstatementfilerepo.BankStatementFileDB
-	stmtRepo bankstatementrepo.BankStatementDB
+	fileRepo            bankstatementfilerepo.BankStatementFileDB
+	stmtRepo            bankstatementrepo.BankStatementDB
+	reconciliationQueue *messaging.ReconciliationQueue
 }
 
 func NewBankStatementProcessUC(
 	fileRepo bankstatementfilerepo.BankStatementFileDB,
 	stmtRepo bankstatementrepo.BankStatementDB,
+	reconciliationQueue *messaging.ReconciliationQueue,
 ) bankstatementprocessuc.BankStatementProcessUC {
 	return &bankStatementProcessUC{
-		fileRepo: fileRepo,
-		stmtRepo: stmtRepo,
+		fileRepo:            fileRepo,
+		stmtRepo:            stmtRepo,
+		reconciliationQueue: reconciliationQueue,
 	}
 }
 
@@ -84,6 +88,8 @@ func (u *bankStatementProcessUC) Process(ctx context.Context, fileID string) err
 	if err := u.fileRepo.UpdateStatus(ctx, fileID, constant.BankStatementFileStatusCompleted); err != nil {
 		return errors.Wrap(err, wrapErrMsg+"Process.UpdateStatus.Completed")
 	}
+
+	u.reconciliationQueue.Publish(fileID)
 
 	return nil
 }

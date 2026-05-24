@@ -69,6 +69,18 @@ func (d *transactionDB) List(ctx context.Context, bankCode string, limit, offset
 	return rows, nil
 }
 
+func (d *transactionDB) ListByBankCodeAndTimeRange(ctx context.Context, bankCode string, start, end int64) ([]model.MstTransaction, error) {
+	var rows []model.MstTransaction
+	err := d.conn.MasterDB.Context(ctx).
+		Where("bank_code = ? AND transaction_time >= ? AND transaction_time <= ?",
+			normalizeBankCode(bankCode), start, end).
+		Find(&rows)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, errors.Wrap(err, wrapErrMsgPrefix+"ListByBankCodeAndTimeRange")
+	}
+	return rows, nil
+}
+
 func normalizeBankCode(bankCode string) string {
 	return strings.ToUpper(strings.TrimSpace(bankCode))
 }
