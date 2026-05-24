@@ -31,6 +31,17 @@ func (d *transactionDB) Insert(ctx context.Context, tx *model.MstTransaction) er
 	return nil
 }
 
+func (d *transactionDB) InsertBatch(ctx context.Context, txs []model.MstTransaction) error {
+	if len(txs) == 0 {
+		return nil
+	}
+	_, err := d.conn.MasterDB.Context(ctx).Insert(&txs)
+	if err != nil {
+		return errors.Wrap(err, wrapErrMsgPrefix+"InsertBatch")
+	}
+	return nil
+}
+
 func (d *transactionDB) GetByID(ctx context.Context, bankCode string, id uuid.UUID) (*model.MstTransaction, error) {
 	var row model.MstTransaction
 	has, err := d.conn.MasterDB.Context(ctx).

@@ -29,6 +29,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 		r.Route("/v1", func(r chi.Router) {
 			r.Route("/transaction/{bankCode}", func(r chi.Router) {
 				h := s.handlers.TransactionHandler
+				r.Post("/upload", h.UploadCSV)
 				r.Post("/", h.Create)
 				r.Get("/", h.List)
 				r.Get("/{id}", h.GetByID)
