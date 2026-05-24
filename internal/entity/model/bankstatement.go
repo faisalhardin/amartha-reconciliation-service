@@ -9,9 +9,10 @@ import (
 const MstBankStatementTableName = "amt_mst_bank_statement"
 
 type MstBankStatement struct {
-	ID               string          `xorm:"pk 'id'" json:"id"`
-	BankCode         string          `xorm:"bank_code" json:"bankCode"`
-	UniqueIdentifier string          `xorm:"unique_identifier" json:"uniqueIdentifier"`
+	ID                   string          `xorm:"pk 'id'" json:"id"`
+	BankCode             string          `xorm:"bank_code" json:"bankCode"`
+	BankStatementFileID  string          `xorm:"id_bank_statement_file" json:"bankStatementFileId"`
+	UniqueIdentifier     string          `xorm:"unique_identifier" json:"uniqueIdentifier"`
 	Amount           decimal.Decimal `xorm:"amount" json:"amount"`
 	Date             int64           `xorm:"date" json:"date"`
 	CreateTime       time.Time       `xorm:"created 'create_time'" json:"-"`

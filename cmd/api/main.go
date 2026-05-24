@@ -14,14 +14,18 @@ import (
 	bankstatementhandler "github.com/faisalhardin/amartha-reconciliation-service/internal/http/bankstatement"
 	transactionhandler "github.com/faisalhardin/amartha-reconciliation-service/internal/http/transaction"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/library/db/xorm"
+	"github.com/faisalhardin/amartha-reconciliation-service/internal/messaging"
+	bankstatementrepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/bankstatement"
 	bankstatementfilerepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/bankstatementfile"
 	transactionrepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/transaction"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/server"
 	bankstatementfileuc "github.com/faisalhardin/amartha-reconciliation-service/internal/usecase/bankstatementfile"
+	bankstatementprocessuc "github.com/faisalhardin/amartha-reconciliation-service/internal/usecase/bankstatementprocess"
 	transactionuc "github.com/faisalhardin/amartha-reconciliation-service/internal/usecase/transaction"
+	"github.com/faisalhardin/amartha-reconciliation-service/internal/worker"
 )
 
-func gracefulShutdown(apiServer *http.Server, done chan bool) {
+func gracefulShutdown(apiServer *http.Server, workerCancel context.CancelFunc, queue *messaging.BankStatementProcessQueue, done chan bool) {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -30,11 +34,14 @@ func gracefulShutdown(apiServer *http.Server, done chan bool) {
 	log.Println("shutting down gracefully, press Ctrl+C again to force")
 	stop()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := apiServer.Shutdown(ctx); err != nil {
+	if err := apiServer.Shutdown(shutdownCtx); err != nil {
 		log.Printf("Server forced to shutdown with error: %v", err)
 	}
+
+	workerCancel()
+	queue.Close()
 
 	log.Println("Server exiting")
 	done <- true
@@ -56,11 +63,19 @@ func main() {
 		}
 	}()
 
+	queue := messaging.NewBankStatementProcessQueue(100)
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	defer workerCancel()
+
 	transactionDB := transactionrepo.NewTransactionDB(conn)
 	bankStatementFileDB := bankstatementfilerepo.NewBankStatementFileDB(conn)
+	bankStatementDB := bankstatementrepo.NewBankStatementDB(conn)
+
+	processUC := bankstatementprocessuc.NewBankStatementProcessUC(bankStatementFileDB, bankStatementDB)
+	worker.StartBankStatementWorker(workerCtx, queue, processUC)
 
 	transactionUC := transactionuc.NewTransactionUC(transactionDB)
-	bankStatementFileUC := bankstatementfileuc.NewBankStatementFileUC(bankStatementFileDB)
+	bankStatementFileUC := bankstatementfileuc.NewBankStatementFileUC(bankStatementFileDB, queue)
 
 	handlers := &entityhttp.Handlers{
 		TransactionHandler:   transactionhandler.New(transactionUC),
@@ -70,7 +85,7 @@ func main() {
 	apiServer := server.NewServer(handlers)
 
 	done := make(chan bool, 1)
-	go gracefulShutdown(apiServer, done)
+	go gracefulShutdown(apiServer, workerCancel, queue, done)
 
 	err = apiServer.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {

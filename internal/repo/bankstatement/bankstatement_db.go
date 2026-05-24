@@ -30,6 +30,17 @@ func (d *bankStatementDB) Insert(ctx context.Context, stmt *model.MstBankStateme
 	return nil
 }
 
+func (d *bankStatementDB) InsertBatch(ctx context.Context, stmts []model.MstBankStatement) error {
+	if len(stmts) == 0 {
+		return nil
+	}
+	_, err := d.conn.MasterDB.Context(ctx).Insert(&stmts)
+	if err != nil {
+		return errors.Wrap(err, wrapErrMsgPrefix+"InsertBatch")
+	}
+	return nil
+}
+
 func (d *bankStatementDB) GetByID(ctx context.Context, id uuid.UUID) (*model.MstBankStatement, error) {
 	var row model.MstBankStatement
 	has, err := d.conn.MasterDB.Context(ctx).ID(id.String()).Get(&row)

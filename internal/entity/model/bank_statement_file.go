@@ -12,7 +12,9 @@ type MstBankStatementFile struct {
 	StartDate    int64     `xorm:"start_date" json:"startDate"`
 	EndDate      int64     `xorm:"end_date" json:"endDate"`
 	HashID       string    `xorm:"hash_id" json:"-"`
+	Status       string    `xorm:"status" json:"status"`
 	CreateTime   time.Time `xorm:"created 'create_time'" json:"-"`
+	UpdateTime   time.Time `xorm:"updated 'update_time'" json:"-"`
 }
 
 func (MstBankStatementFile) TableName() string {

@@ -7,10 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/faisalhardin/amartha-reconciliation-service/internal/entity/constant"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/entity/model"
 	bankstatementfilerepo "github.com/faisalhardin/amartha-reconciliation-service/internal/entity/repo/bankstatementfile"
 	bankstatementfileuc "github.com/faisalhardin/amartha-reconciliation-service/internal/entity/usecase/bankstatementfile"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/library/common/commonerr"
+	"github.com/faisalhardin/amartha-reconciliation-service/internal/messaging"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
@@ -18,11 +20,18 @@ import (
 const wrapErrMsg = "BankStatementFileUC."
 
 type bankStatementFileUC struct {
-	repo bankstatementfilerepo.BankStatementFileDB
+	repo  bankstatementfilerepo.BankStatementFileDB
+	queue *messaging.BankStatementProcessQueue
 }
 
-func NewBankStatementFileUC(repo bankstatementfilerepo.BankStatementFileDB) bankstatementfileuc.BankStatementFileUC {
-	return &bankStatementFileUC{repo: repo}
+func NewBankStatementFileUC(
+	repo bankstatementfilerepo.BankStatementFileDB,
+	queue *messaging.BankStatementProcessQueue,
+) bankstatementfileuc.BankStatementFileUC {
+	return &bankStatementFileUC{
+		repo:  repo,
+		queue: queue,
+	}
 }
 
 func (u *bankStatementFileUC) Upload(ctx context.Context, req model.UploadMstBankStatementFileRequest) (*model.UploadMstBankStatementFileResponse, error) {
@@ -54,12 +63,15 @@ func (u *bankStatementFileUC) Upload(ctx context.Context, req model.UploadMstBan
 		FileLocation: fileLocation,
 		StartDate:    req.StartDate,
 		EndDate:      req.EndDate,
+		Status:       constant.BankStatementFileStatusPending,
 	}
 
 	if err := u.repo.Insert(ctx, record); err != nil {
 		_ = os.Remove(fileLocation)
 		return nil, errors.Wrap(err, wrapErrMsg+"Upload.Insert")
 	}
+
+	u.queue.Publish(record.ID)
 
 	return &model.UploadMstBankStatementFileResponse{FileID: record.ID}, nil
 }
