@@ -11,11 +11,13 @@ import (
 
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/config"
 	entityhttp "github.com/faisalhardin/amartha-reconciliation-service/internal/entity/http"
+	bankstatementhandler "github.com/faisalhardin/amartha-reconciliation-service/internal/http/bankstatement"
 	transactionhandler "github.com/faisalhardin/amartha-reconciliation-service/internal/http/transaction"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/library/db/xorm"
-	bankstatementrepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/bankstatement"
+	bankstatementfilerepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/bankstatementfile"
 	transactionrepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/transaction"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/server"
+	bankstatementfileuc "github.com/faisalhardin/amartha-reconciliation-service/internal/usecase/bankstatementfile"
 	transactionuc "github.com/faisalhardin/amartha-reconciliation-service/internal/usecase/transaction"
 )
 
@@ -55,11 +57,14 @@ func main() {
 	}()
 
 	transactionDB := transactionrepo.NewTransactionDB(conn)
-	_ = bankstatementrepo.NewBankStatementDB(conn)
+	bankStatementFileDB := bankstatementfilerepo.NewBankStatementFileDB(conn)
 
 	transactionUC := transactionuc.NewTransactionUC(transactionDB)
+	bankStatementFileUC := bankstatementfileuc.NewBankStatementFileUC(bankStatementFileDB)
+
 	handlers := &entityhttp.Handlers{
-		TransactionHandler: transactionhandler.New(transactionUC),
+		TransactionHandler:   transactionhandler.New(transactionUC),
+		BankStatementHandler: bankstatementhandler.New(bankStatementFileUC),
 	}
 
 	apiServer := server.NewServer(handlers)
