@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"context"
+	"strings"
 
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/entity/constant"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/entity/model"
@@ -27,6 +28,10 @@ func NewTransactionUC(repo transactionrepo.TransactionDB) transactionuc.Transact
 }
 
 func (u *transactionUC) Create(ctx context.Context, req model.CreateMstTransactionRequest) (*model.MstTransaction, error) {
+	normalizedBankCode, err := normalizeBankCode(req.BankCode)
+	if err != nil {
+		return nil, err
+	}
 
 	id, err := uuid.NewV7()
 	if err != nil {
@@ -35,6 +40,7 @@ func (u *transactionUC) Create(ctx context.Context, req model.CreateMstTransacti
 
 	tx := &model.MstTransaction{
 		ID:              id.String(),
+		BankCode:        normalizedBankCode,
 		Amount:          req.Amount,
 		Type:            req.Type,
 		TransactionTime: req.TransactionTime,
@@ -47,13 +53,18 @@ func (u *transactionUC) Create(ctx context.Context, req model.CreateMstTransacti
 	return tx, nil
 }
 
-func (u *transactionUC) GetByID(ctx context.Context, id string) (*model.MstTransaction, error) {
+func (u *transactionUC) GetByID(ctx context.Context, bankCode, id string) (*model.MstTransaction, error) {
+	normalizedBankCode, err := normalizeBankCode(bankCode)
+	if err != nil {
+		return nil, err
+	}
+
 	parsed, err := uuid.Parse(id)
 	if err != nil {
 		return nil, commonerr.SetNewBadRequest("invalid_id", "transaction id must be a valid UUID")
 	}
 
-	tx, err := u.repo.GetByID(ctx, parsed)
+	tx, err := u.repo.GetByID(ctx, normalizedBankCode, parsed)
 	if err != nil {
 		if errors.Is(err, constant.ErrNotFound) {
 			return nil, commonerr.Set404()
@@ -64,10 +75,15 @@ func (u *transactionUC) GetByID(ctx context.Context, id string) (*model.MstTrans
 	return tx, nil
 }
 
-func (u *transactionUC) List(ctx context.Context, limit, offset int) ([]model.MstTransaction, error) {
-	limit, offset = normalizeListParams(limit, offset)
+func (u *transactionUC) List(ctx context.Context, param model.ListMstTransactionParam) ([]model.MstTransaction, error) {
+	normalizedBankCode, err := normalizeBankCode(param.BankCode)
+	if err != nil {
+		return nil, err
+	}
 
-	rows, err := u.repo.List(ctx, limit, offset)
+	limit, offset := normalizeListParams(param.Limit, param.Offset)
+
+	rows, err := u.repo.List(ctx, normalizedBankCode, limit, offset)
 	if err != nil {
 		return nil, errors.Wrap(err, wrapErrMsg+"List")
 	}
@@ -75,6 +91,14 @@ func (u *transactionUC) List(ctx context.Context, limit, offset int) ([]model.Ms
 		return []model.MstTransaction{}, nil
 	}
 	return rows, nil
+}
+
+func normalizeBankCode(bankCode string) (string, error) {
+	normalized := strings.ToUpper(strings.TrimSpace(bankCode))
+	if normalized == "" {
+		return "", commonerr.SetNewBadRequest("invalid_bank_code", "bank code is required")
+	}
+	return normalized, nil
 }
 
 func normalizeListParams(limit, offset int) (int, int) {

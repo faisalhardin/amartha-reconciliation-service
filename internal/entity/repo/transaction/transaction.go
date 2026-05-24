@@ -9,6 +9,6 @@ import (
 
 type TransactionDB interface {
 	Insert(ctx context.Context, tx *model.MstTransaction) error
-	GetByID(ctx context.Context, id uuid.UUID) (*model.MstTransaction, error)
-	List(ctx context.Context, limit, offset int) ([]model.MstTransaction, error)
+	GetByID(ctx context.Context, bankCode string, id uuid.UUID) (*model.MstTransaction, error)
+	List(ctx context.Context, bankCode string, limit, offset int) ([]model.MstTransaction, error)
 }

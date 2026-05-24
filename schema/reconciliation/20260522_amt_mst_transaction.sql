@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS amt_mst_transaction (
     id UUID PRIMARY KEY,
+    bank_code VARCHAR(50) NOT NULL,
     amount NUMERIC(19, 4) NOT NULL,
     type VARCHAR(10) NOT NULL,
     transaction_time BIGINT NOT NULL,
@@ -19,6 +20,12 @@ CREATE TABLE IF NOT EXISTS amt_mst_bank_statement (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_amt_mst_bank_statement_unique_identifier
     ON amt_mst_bank_statement (unique_identifier);
+
+CREATE INDEX IF NOT EXISTS idx_amt_mst_transaction_bank_code
+    ON amt_mst_transaction (bank_code);
+
+ALTER TABLE amt_mst_transaction
+    ADD COLUMN IF NOT EXISTS bank_code VARCHAR(50) NOT NULL DEFAULT '';
 
 ALTER TABLE amt_mst_bank_statement
     ADD COLUMN IF NOT EXISTS bank_code VARCHAR(50) NOT NULL DEFAULT '';

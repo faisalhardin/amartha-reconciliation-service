@@ -27,7 +27,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	if s.handlers != nil && s.handlers.TransactionHandler != nil {
 		r.Route("/v1", func(r chi.Router) {
-			r.Route("/transactions", func(r chi.Router) {
+			r.Route("/transaction/{bankCode}", func(r chi.Router) {
 				h := s.handlers.TransactionHandler
 				r.Post("/", h.Create)
 				r.Get("/", h.List)

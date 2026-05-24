@@ -20,6 +20,7 @@ func New(uc transactionuc.TransactionUC) *Handler {
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req model.CreateMstTransactionRequest
+	req.BankCode = chi.URLParam(r, "bankCode")
 	if err := binding.Bind(r, &req); err != nil {
 		_ = httpwriter.SetError(r.Context(), w, err)
 		return
@@ -35,8 +36,10 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
+	bankCode := chi.URLParam(r, "bankCode")
 	id := chi.URLParam(r, "id")
-	tx, err := h.TransactionUC.GetByID(r.Context(), id)
+
+	tx, err := h.TransactionUC.GetByID(r.Context(), bankCode, id)
 	if err != nil {
 		_ = httpwriter.SetError(r.Context(), w, err)
 		return
@@ -46,13 +49,14 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	var query model.ListMstTransactionQuery
-	if err := binding.Bind(r, &query); err != nil {
+	var param model.ListMstTransactionParam
+	param.BankCode = chi.URLParam(r, "bankCode")
+	if err := binding.Bind(r, &param); err != nil {
 		_ = httpwriter.SetError(r.Context(), w, err)
 		return
 	}
 
-	rows, err := h.TransactionUC.List(r.Context(), query.Limit, query.Offset)
+	rows, err := h.TransactionUC.List(r.Context(), param)
 	if err != nil {
 		_ = httpwriter.SetError(r.Context(), w, err)
 		return

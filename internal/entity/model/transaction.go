@@ -26,6 +26,7 @@ func (t TransactionType) IsValid() bool {
 
 type MstTransaction struct {
 	ID              string          `xorm:"pk 'id'" json:"id"`
+	BankCode        string          `xorm:"bank_code" json:"bankCode"`
 	Amount          decimal.Decimal `xorm:"amount" json:"amount"`
 	Type            TransactionType `xorm:"type" json:"type"`
 	TransactionTime int64           `xorm:"transaction_time" json:"transactionTime"`
@@ -38,18 +39,20 @@ func (MstTransaction) TableName() string {
 }
 
 type CreateMstTransactionRequest struct {
+	BankCode        string          `json:"-" validate:"required"`
 	Amount          decimal.Decimal `json:"amount" validate:"required,gt=0"`
 	Type            TransactionType `json:"type" validate:"required,oneof=DEBIT CREDIT"`
 	TransactionTime int64           `json:"transactionTime" validate:"required,gt=0"`
 }
 
-type ListMstTransactionQuery struct {
-	Limit  int `schema:"limit" validate:"omitempty,min=1,max=100"`
-	Offset int `schema:"offset" validate:"omitempty,min=0"`
+type ListMstTransactionParam struct {
+	BankCode string `schema:"-" validate:"required"`
+	CommonRequestParam
 }
 
 type MstTransactionResponse struct {
 	ID              string          `json:"id"`
+	BankCode        string          `json:"bankCode"`
 	Amount          decimal.Decimal `json:"amount"`
 	Type            TransactionType `json:"type"`
 	TransactionTime int64           `json:"transactionTime"`
@@ -58,6 +61,7 @@ type MstTransactionResponse struct {
 func ToMstTransactionResponse(t *MstTransaction) MstTransactionResponse {
 	return MstTransactionResponse{
 		ID:              t.ID,
+		BankCode:        t.BankCode,
 		Amount:          t.Amount,
 		Type:            t.Type,
 		TransactionTime: t.TransactionTime,
