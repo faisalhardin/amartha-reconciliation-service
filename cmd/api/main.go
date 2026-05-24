@@ -21,6 +21,7 @@ import (
 	reconciliationrepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/reconciliation"
 	transactionrepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/transaction"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/server"
+	bankstatementuc "github.com/faisalhardin/amartha-reconciliation-service/internal/usecase/bankstatement"
 	bankstatementfileuc "github.com/faisalhardin/amartha-reconciliation-service/internal/usecase/bankstatementfile"
 	bankstatementprocessuc "github.com/faisalhardin/amartha-reconciliation-service/internal/usecase/bankstatementprocess"
 	reconciliationuc "github.com/faisalhardin/amartha-reconciliation-service/internal/usecase/reconciliation"
@@ -100,10 +101,11 @@ func main() {
 
 	transactionUC := transactionuc.NewTransactionUC(transactionDB)
 	bankStatementFileUC := bankstatementfileuc.NewBankStatementFileUC(bankStatementFileDB, processQueue)
+	bankStatementUC := bankstatementuc.NewBankStatementUC(bankStatementDB, bankStatementFileDB)
 
 	handlers := &entityhttp.Handlers{
 		TransactionHandler:    transactionhandler.New(transactionUC),
-		BankStatementHandler:  bankstatementhandler.New(bankStatementFileUC),
+		BankStatementHandler:  bankstatementhandler.New(bankStatementFileUC, bankStatementUC),
 		ReconciliationHandler: reconciliationhandler.New(reconciliationUC),
 	}
 

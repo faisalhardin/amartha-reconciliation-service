@@ -3,6 +3,7 @@ package bankstatement
 import (
 	"context"
 	"database/sql"
+	"strings"
 
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/entity/constant"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/entity/model"
@@ -91,4 +92,21 @@ func (d *bankStatementDB) ListByFileID(ctx context.Context, fileID string) ([]mo
 		return nil, errors.Wrap(err, wrapErrMsgPrefix+"ListByFileID")
 	}
 	return rows, nil
+}
+
+func (d *bankStatementDB) ListByBankCodeAndFileID(ctx context.Context, query model.ListMstBankStatementQuery) ([]model.MstBankStatement, error) {
+	var rows []model.MstBankStatement
+	err := d.conn.MasterDB.Context(ctx).
+		Where("bank_code = ? AND id_bank_statement_file = ?", normalizeBankCode(query.BankCode), query.FileID).
+		Limit(query.Limit, query.Offset).
+		Desc("date").
+		Find(&rows)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, errors.Wrap(err, wrapErrMsgPrefix+"ListByBankCodeAndFileID")
+	}
+	return rows, nil
+}
+
+func normalizeBankCode(bankCode string) string {
+	return strings.ToUpper(strings.TrimSpace(bankCode))
 }

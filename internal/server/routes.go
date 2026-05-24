@@ -26,6 +26,11 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Get("/health", s.healthHandler)
 
 	r.Route("/v1", func(r chi.Router) {
+		r.Route("/bank-statement/{bankCode}", func(r chi.Router) {
+			h := s.handlers.BankStatementHandler
+			r.Get("/", h.List)
+		})
+
 		r.Route("/bank-statement", func(r chi.Router) {
 			r.Post("/upload", s.handlers.BankStatementHandler.Upload)
 		})

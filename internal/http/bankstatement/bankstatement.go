@@ -7,17 +7,46 @@ import (
 	"strings"
 
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/entity/model"
+	bankstatementuc "github.com/faisalhardin/amartha-reconciliation-service/internal/entity/usecase/bankstatement"
 	bankstatementfileuc "github.com/faisalhardin/amartha-reconciliation-service/internal/entity/usecase/bankstatementfile"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/library/common/commonerr"
 	httpwriter "github.com/faisalhardin/amartha-reconciliation-service/internal/library/common/writer"
+	"github.com/faisalhardin/amartha-reconciliation-service/internal/library/util/common/binding"
+	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {
 	BankStatementFileUC bankstatementfileuc.BankStatementFileUC
+	BankStatementUC     bankstatementuc.BankStatementUC
 }
 
-func New(uc bankstatementfileuc.BankStatementFileUC) *Handler {
-	return &Handler{BankStatementFileUC: uc}
+func New(fileUC bankstatementfileuc.BankStatementFileUC, stmtUC bankstatementuc.BankStatementUC) *Handler {
+	return &Handler{
+		BankStatementFileUC: fileUC,
+		BankStatementUC:     stmtUC,
+	}
+}
+
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
+	var param model.ListMstBankStatementParam
+	param.BankCode = chi.URLParam(r, "bankCode")
+	if err := binding.Bind(r, &param); err != nil {
+		_ = httpwriter.SetError(r.Context(), w, err)
+		return
+	}
+
+	rows, err := h.BankStatementUC.List(r.Context(), param)
+	if err != nil {
+		_ = httpwriter.SetError(r.Context(), w, err)
+		return
+	}
+
+	resp := make([]model.MstBankStatementResponse, 0, len(rows))
+	for i := range rows {
+		resp = append(resp, model.ToMstBankStatementResponse(&rows[i]))
+	}
+
+	_ = httpwriter.SetOKWithData(r.Context(), w, resp)
 }
 
 func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
