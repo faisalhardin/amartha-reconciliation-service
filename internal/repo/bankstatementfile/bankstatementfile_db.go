@@ -2,6 +2,8 @@ package bankstatementfile
 
 import (
 	"context"
+	"database/sql"
+	"strings"
 
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/entity/constant"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/entity/model"
@@ -49,4 +51,21 @@ func (d *bankStatementFileDB) UpdateStatus(ctx context.Context, fileID, status s
 		return errors.Wrap(err, wrapErrMsgPrefix+"UpdateStatus")
 	}
 	return nil
+}
+
+func (d *bankStatementFileDB) ListByBankCode(ctx context.Context, query model.ListMstBankStatementFileQuery) ([]model.MstBankStatementFile, error) {
+	var rows []model.MstBankStatementFile
+	err := d.conn.MasterDB.Context(ctx).
+		Where("bank_code = ?", normalizeBankCode(query.BankCode)).
+		Limit(query.Limit, query.Offset).
+		Desc("create_time").
+		Find(&rows)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, errors.Wrap(err, wrapErrMsgPrefix+"ListByBankCode")
+	}
+	return rows, nil
+}
+
+func normalizeBankCode(bankCode string) string {
+	return strings.ToUpper(strings.TrimSpace(bankCode))
 }

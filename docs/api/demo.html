@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reconciliation Service API Demo</title>
+  <style>
+    :root {
+      --bg: #f0f2f5;
+      --card: #fff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --ok: #15803d;
+      --err: #b91c1c;
+      --mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+    header {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    h1 { margin: 0 0 .5rem; font-size: 1.5rem; }
+    .hint {
+      color: var(--muted);
+      font-size: .9rem;
+      margin: 0 0 1rem;
+    }
+    .config {
+      display: grid;
+      grid-template-columns: 1fr 120px;
+      gap: .75rem;
+      align-items: end;
+    }
+    label { display: block; font-size: .8rem; font-weight: 600; color: var(--muted); margin-bottom: .25rem; }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: .5rem .65rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: .95rem;
+    }
+    input[type="file"] { font-size: .85rem; max-width: 100%; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .card h2 {
+      margin: 0 0 .25rem;
+      font-size: 1.1rem;
+    }
+    .method {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: .75rem;
+      font-weight: 700;
+      padding: .15rem .45rem;
+      border-radius: 4px;
+      margin-right: .5rem;
+    }
+    .method.post { background: #dbeafe; color: #1e40af; }
+    .method.get { background: #dcfce7; color: #166534; }
+    .path {
+      font-family: var(--mono);
+      font-size: .8rem;
+      color: var(--muted);
+      word-break: break-all;
+      margin-bottom: 1rem;
+    }
+    .fields {
+      display: grid;
+      gap: .75rem;
+      margin-bottom: 1rem;
+    }
+    .fields.row2 { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 600px) { .fields.row2 { grid-template-columns: 1fr; } .config { grid-template-columns: 1fr; } }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: .55rem 1.1rem;
+      border-radius: 8px;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover:not(:disabled) { background: var(--accent-hover); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .status {
+      font-size: .85rem;
+      margin: .75rem 0 .35rem;
+      font-weight: 600;
+    }
+    .status.ok { color: var(--ok); }
+    .status.fail { color: var(--err); }
+    pre.response {
+      margin: 0;
+      padding: .85rem;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 8px;
+      font-family: var(--mono);
+      font-size: .78rem;
+      overflow: auto;
+      max-height: 320px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    pre.response.empty { color: var(--muted); background: #f8fafc; border: 1px dashed var(--border); }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Reconciliation Service API Demo</h1>
+      <p class="hint">
+        Workflow: upload transactions → upload bank statement (wait until status <strong>COMPLETED</strong>) → list / summary.
+        Sample CSVs: <code>files/samples/transactions_bca_t3.csv</code>, <code>files/samples/bank_statement_bca_t3.csv</code>
+        (timeframe e.g. start <code>1779620400</code>, end <code>1779638400</code>).
+      </p>
+      <div class="config">
+        <div>
+          <label for="baseUrl">API base URL</label>
+          <input type="text" id="baseUrl" value="http://localhost:8080">
+        </div>
+        <div>
+          <label for="bankCode">Bank code</label>
+          <input type="text" id="bankCode" value="bca">
+        </div>
+      </div>
+    </header>
+
+    <section class="card" data-section="upload-tx">
+      <h2><span class="method post">POST</span> Bulk upload transactions</h2>
+      <p class="path">/v1/transaction/{bankCode}/upload</p>
+      <div class="fields">
+        <div>
+          <label>CSV file</label>
+          <input type="file" id="txFile" accept=".csv">
+        </div>
+      </div>
+      <button type="button" data-action="upload-tx">Upload</button>
+      <div class="status" data-status></div>
+      <pre class="response empty" data-response>Response will appear here…</pre>
+    </section>
+
+    <section class="card" data-section="upload-stmt">
+      <h2><span class="method post">POST</span> Bulk upload bank statement</h2>
+      <p class="path">/v1/bank-statement/upload</p>
+      <div class="fields row2">
+        <div>
+          <label>Start date (unix)</label>
+          <input type="number" id="stmtStart" value="1779620400">
+        </div>
+        <div>
+          <label>End date (unix)</label>
+          <input type="number" id="stmtEnd" value="1779638400">
+        </div>
+        <div style="grid-column: 1 / -1">
+          <label>CSV file</label>
+          <input type="file" id="stmtFile" accept=".csv">
+        </div>
+      </div>
+      <button type="button" data-action="upload-stmt">Upload</button>
+      <div class="status" data-status></div>
+      <pre class="response empty" data-response>Response will appear here…</pre>
+    </section>
+
+    <section class="card" data-section="list-files">
+      <h2><span class="method get">GET</span> List bank statement files</h2>
+      <p class="path">/v1/bank-statement/{bankCode}/files</p>
+      <div class="fields row2">
+        <div>
+          <label>Limit</label>
+          <input type="number" id="filesLimit" value="20" min="1">
+        </div>
+        <div>
+          <label>Offset</label>
+          <input type="number" id="filesOffset" value="0" min="0">
+        </div>
+      </div>
+      <button type="button" data-action="list-files">Send</button>
+      <div class="status" data-status></div>
+      <pre class="response empty" data-response>Response will appear here…</pre>
+    </section>
+
+    <section class="card" data-section="list-stmt">
+      <h2><span class="method get">GET</span> List bank statements</h2>
+      <p class="path">/v1/bank-statement/{bankCode}?fileId=&amp;limit=</p>
+      <div class="fields row2">
+        <div>
+          <label>File ID</label>
+          <input type="text" id="stmtListFileId" placeholder="from upload response">
+        </div>
+        <div>
+          <label>Limit</label>
+          <input type="number" id="stmtListLimit" value="30" min="1">
+        </div>
+      </div>
+      <button type="button" data-action="list-stmt">Send</button>
+      <div class="status" data-status></div>
+      <pre class="response empty" data-response>Response will appear here…</pre>
+    </section>
+
+    <section class="card" data-section="list-tx">
+      <h2><span class="method get">GET</span> List transactions</h2>
+      <p class="path">/v1/transaction/{bankCode}?limit=&amp;offset=</p>
+      <div class="fields row2">
+        <div>
+          <label>Limit</label>
+          <input type="number" id="txLimit" value="30" min="1">
+        </div>
+        <div>
+          <label>Offset</label>
+          <input type="number" id="txOffset" value="0" min="0">
+        </div>
+      </div>
+      <button type="button" data-action="list-tx">Send</button>
+      <div class="status" data-status></div>
+      <pre class="response empty" data-response>Response will appear here…</pre>
+    </section>
+
+    <section class="card" data-section="summary">
+      <h2><span class="method get">GET</span> Reconciliation summary</h2>
+      <p class="path">/v1/reconciliation/summary/{fileID}</p>
+      <div class="fields">
+        <div>
+          <label>File ID</label>
+          <input type="text" id="summaryFileId" placeholder="COMPLETED file uuid">
+        </div>
+      </div>
+      <button type="button" data-action="summary">Send</button>
+      <div class="status" data-status></div>
+      <pre class="response empty" data-response>Response will appear here…</pre>
+    </section>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    function base() {
+      return $("baseUrl").value.replace(/\/$/, "");
+    }
+
+    function bank() {
+      return encodeURIComponent($("bankCode").value.trim());
+    }
+
+    function setFileId(id) {
+      if (!id) return;
+      $("stmtListFileId").value = id;
+      $("summaryFileId").value = id;
+    }
+
+    function sectionEl(action) {
+      return document.querySelector('[data-section="' + action + '"]');
+    }
+
+    function setLoading(action, loading) {
+      const card = sectionEl(action);
+      card.querySelector("button").disabled = loading;
+    }
+
+    function showResult(action, status, ms, body) {
+      const card = sectionEl(action);
+      const statusEl = card.querySelector("[data-status]");
+      const pre = card.querySelector("[data-response]");
+      const ok = status >= 200 && status < 300;
+      statusEl.textContent = "HTTP " + status + " · " + ms + " ms";
+      statusEl.className = "status " + (ok ? "ok" : "fail");
+      pre.classList.remove("empty");
+      pre.textContent = typeof body === "string" ? body : JSON.stringify(body, null, 2);
+    }
+
+    async function request(action, url, options) {
+      setLoading(action, true);
+      const t0 = performance.now();
+      try {
+        const res = await fetch(url, options);
+        const ms = Math.round(performance.now() - t0);
+        let json;
+        const text = await res.text();
+        try { json = JSON.parse(text); } catch { json = text; }
+        showResult(action, res.status, ms, json);
+        return { res, json };
+      } catch (err) {
+        showResult(action, 0, Math.round(performance.now() - t0), { error: String(err) });
+        return { res: null, json: null };
+      } finally {
+        setLoading(action, false);
+      }
+    }
+
+    document.querySelector('[data-action="upload-tx"]').addEventListener("click", async () => {
+      const file = $("txFile").files[0];
+      if (!file) { alert("Choose a CSV file"); return; }
+      const fd = new FormData();
+      fd.append("file", file);
+      await request("upload-tx", base() + "/v1/transaction/" + bank() + "/upload", { method: "POST", body: fd });
+    });
+
+    document.querySelector('[data-action="upload-stmt"]').addEventListener("click", async () => {
+      const file = $("stmtFile").files[0];
+      if (!file) { alert("Choose a CSV file"); return; }
+      const fd = new FormData();
+      fd.append("bank_code", $("bankCode").value.trim());
+      fd.append("start_date", $("stmtStart").value);
+      fd.append("end_date", $("stmtEnd").value);
+      fd.append("file", file);
+      const { json } = await request("upload-stmt", base() + "/v1/bank-statement/upload", { method: "POST", body: fd });
+      if (json && json.data && json.data.fileId) setFileId(json.data.fileId);
+    });
+
+    document.querySelector('[data-action="list-files"]').addEventListener("click", async () => {
+      const q = new URLSearchParams({
+        limit: $("filesLimit").value || "20",
+        offset: $("filesOffset").value || "0"
+      });
+      await request("list-files", base() + "/v1/bank-statement/" + bank() + "/files?" + q);
+    });
+
+    document.querySelector('[data-action="list-stmt"]').addEventListener("click", async () => {
+      const fileId = $("stmtListFileId").value.trim();
+      if (!fileId) { alert("fileId is required"); return; }
+      const q = new URLSearchParams({
+        fileId,
+        limit: $("stmtListLimit").value || "20"
+      });
+      await request("list-stmt", base() + "/v1/bank-statement/" + bank() + "?" + q);
+    });
+
+    document.querySelector('[data-action="list-tx"]').addEventListener("click", async () => {
+      const q = new URLSearchParams({
+        limit: $("txLimit").value || "20",
+        offset: $("txOffset").value || "0"
+      });
+      await request("list-tx", base() + "/v1/transaction/" + bank() + "?" + q);
+    });
+
+    document.querySelector('[data-action="summary"]').addEventListener("click", async () => {
+      const fileId = $("summaryFileId").value.trim();
+      if (!fileId) { alert("fileId is required"); return; }
+      await request("summary", base() + "/v1/reconciliation/summary/" + encodeURIComponent(fileId));
+    });
+  </script>
+</body>
+</html>

@@ -32,3 +32,34 @@ type UploadMstBankStatementFileRequest struct {
 type UploadMstBankStatementFileResponse struct {
 	FileID string `json:"fileId"`
 }
+
+type ListMstBankStatementFileParam struct {
+	BankCode string `schema:"-" validate:"required"`
+	CommonRequestParam
+}
+
+type ListMstBankStatementFileQuery struct {
+	BankCode string
+	Limit    int
+	Offset   int
+}
+
+type MstBankStatementFileResponse struct {
+	ID        string `json:"id"`
+	BankCode  string `json:"bankCode"`
+	FileName  string `json:"fileName"`
+	StartDate int64  `json:"startDate"`
+	EndDate   int64  `json:"endDate"`
+	Status    string `json:"status"`
+}
+
+func ToMstBankStatementFileResponse(f *MstBankStatementFile) MstBankStatementFileResponse {
+	return MstBankStatementFileResponse{
+		ID:        f.ID,
+		BankCode:  f.BankCode,
+		FileName:  f.FileName,
+		StartDate: f.StartDate,
+		EndDate:   f.EndDate,
+		Status:    f.Status,
+	}
+}

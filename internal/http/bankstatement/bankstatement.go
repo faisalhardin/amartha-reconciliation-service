@@ -27,6 +27,28 @@ func New(fileUC bankstatementfileuc.BankStatementFileUC, stmtUC bankstatementuc.
 	}
 }
 
+func (h *Handler) ListFiles(w http.ResponseWriter, r *http.Request) {
+	var param model.ListMstBankStatementFileParam
+	param.BankCode = chi.URLParam(r, "bankCode")
+	if err := binding.Bind(r, &param); err != nil {
+		_ = httpwriter.SetError(r.Context(), w, err)
+		return
+	}
+
+	rows, err := h.BankStatementFileUC.List(r.Context(), param)
+	if err != nil {
+		_ = httpwriter.SetError(r.Context(), w, err)
+		return
+	}
+
+	resp := make([]model.MstBankStatementFileResponse, 0, len(rows))
+	for i := range rows {
+		resp = append(resp, model.ToMstBankStatementFileResponse(&rows[i]))
+	}
+
+	_ = httpwriter.SetOKWithData(r.Context(), w, resp)
+}
+
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	var param model.ListMstBankStatementParam
 	param.BankCode = chi.URLParam(r, "bankCode")

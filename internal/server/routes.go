@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"path/filepath"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -24,10 +25,14 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	r.Get("/", s.HelloWorldHandler)
 	r.Get("/health", s.healthHandler)
+	r.Get("/demo", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("docs", "api", "demo.html"))
+	})
 
 	r.Route("/v1", func(r chi.Router) {
 		r.Route("/bank-statement/{bankCode}", func(r chi.Router) {
 			h := s.handlers.BankStatementHandler
+			r.Get("/files", h.ListFiles)
 			r.Get("/", h.List)
 		})
 
