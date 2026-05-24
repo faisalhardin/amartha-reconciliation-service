@@ -24,8 +24,3 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_amt_mst_bank_statement_unique_identifier
 CREATE INDEX IF NOT EXISTS idx_amt_mst_transaction_bank_code
     ON amt_mst_transaction (bank_code);
 
-ALTER TABLE amt_mst_transaction
-    ADD COLUMN IF NOT EXISTS bank_code VARCHAR(50) NOT NULL DEFAULT '';
-
-ALTER TABLE amt_mst_bank_statement
-    ADD COLUMN IF NOT EXISTS bank_code VARCHAR(50) NOT NULL DEFAULT '';

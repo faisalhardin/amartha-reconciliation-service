@@ -40,7 +40,7 @@ func (MstTransaction) TableName() string {
 
 type CreateMstTransactionRequest struct {
 	BankCode        string          `json:"-" validate:"required"`
-	Amount          decimal.Decimal `json:"amount" validate:"required,gt=0"`
+	Amount          float64         `json:"amount" validate:"required,gt=0"`
 	Type            TransactionType `json:"type" validate:"required,oneof=DEBIT CREDIT"`
 	TransactionTime int64           `json:"transactionTime" validate:"required,gt=0"`
 }

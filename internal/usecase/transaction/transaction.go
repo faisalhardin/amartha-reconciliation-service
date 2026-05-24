@@ -11,6 +11,7 @@ import (
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/library/common/commonerr"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/shopspring/decimal"
 )
 
 const (
@@ -41,7 +42,7 @@ func (u *transactionUC) Create(ctx context.Context, req model.CreateMstTransacti
 	tx := &model.MstTransaction{
 		ID:              id.String(),
 		BankCode:        normalizedBankCode,
-		Amount:          req.Amount,
+		Amount:          decimal.NewFromFloat(req.Amount),
 		Type:            req.Type,
 		TransactionTime: req.TransactionTime,
 	}
