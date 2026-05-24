@@ -41,6 +41,17 @@ func (d *reconciliationDB) InsertBatch(ctx context.Context, rows []model.TrxReco
 	return nil
 }
 
+func (d *reconciliationDB) ListAllByFileID(ctx context.Context, fileID string) ([]model.TrxReconciliation, error) {
+	var rows []model.TrxReconciliation
+	err := d.conn.MasterDB.Context(ctx).
+		Where("id_bank_statement_file = ?", fileID).
+		Find(&rows)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, errors.Wrap(err, wrapErrMsgPrefix+"ListAllByFileID")
+	}
+	return rows, nil
+}
+
 func (d *reconciliationDB) ListByFileID(ctx context.Context, fileID, status string, limit, offset int) ([]model.TrxReconciliation, error) {
 	sess := d.conn.MasterDB.Context(ctx).
 		Where("id_bank_statement_file = ?", fileID)

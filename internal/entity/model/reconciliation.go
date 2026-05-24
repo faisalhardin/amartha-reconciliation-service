@@ -46,6 +46,32 @@ type ReconciliationResponse struct {
 	MatchMethod         string `json:"matchMethod"`
 }
 
+type ReconciliationSummaryResponse struct {
+	FileID                 string                        `json:"fileId"`
+	BankCode               string                        `json:"bankCode"`
+	StartDate              int64                         `json:"startDate"`
+	EndDate                int64                         `json:"endDate"`
+	TotalProcessed         int                           `json:"totalProcessed"`
+	TotalMatched           int                           `json:"totalMatched"`
+	TotalUnmatched         int                           `json:"totalUnmatched"`
+	TotalMismatch          int                           `json:"totalMismatch"`
+	TotalAmbiguous         int                           `json:"totalAmbiguous"`
+	TotalDiscrepancyAmount string                        `json:"totalDiscrepancyAmount"`
+	UnmatchedByBank        map[string]UnmatchedByBankGroup `json:"unmatchedByBank"`
+}
+
+type UnmatchedByBankGroup struct {
+	OnlyInSystem []MstTransactionResponse      `json:"onlyInSystem"`
+	OnlyInBank   []BankStatementSummaryDetail  `json:"onlyInBank"`
+}
+
+type BankStatementSummaryDetail struct {
+	ID               string `json:"id"`
+	UniqueIdentifier string `json:"uniqueIdentifier"`
+	Amount           string `json:"amount"`
+	Date             int64  `json:"date"`
+}
+
 func ToReconciliationResponse(r *TrxReconciliation) ReconciliationResponse {
 	resp := ReconciliationResponse{
 		ID:                  r.ID,

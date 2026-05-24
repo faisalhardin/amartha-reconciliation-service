@@ -30,6 +30,8 @@ func (s *Server) RegisterRoutes() http.Handler {
 			r.Post("/upload", s.handlers.BankStatementHandler.Upload)
 		})
 
+		r.Get("/reconciliation/summary/{fileID}", s.handlers.ReconciliationHandler.Summary)
+
 		r.Route("/reconciliation/{bankCode}", func(r chi.Router) {
 			h := s.handlers.ReconciliationHandler
 			r.Post("/run", h.Run)

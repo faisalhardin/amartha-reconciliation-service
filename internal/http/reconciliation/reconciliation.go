@@ -52,3 +52,19 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 	_ = httpwriter.SetOKWithData(r.Context(), w, rows)
 }
+
+func (h *Handler) Summary(w http.ResponseWriter, r *http.Request) {
+	fileID := chi.URLParam(r, "fileID")
+	if fileID == "" {
+		_ = httpwriter.SetError(r.Context(), w, commonerr.SetNewBadRequest("missing_file_id", "fileID path parameter is required"))
+		return
+	}
+
+	result, err := h.ReconciliationUC.GetSummary(r.Context(), fileID)
+	if err != nil {
+		_ = httpwriter.SetError(r.Context(), w, err)
+		return
+	}
+
+	_ = httpwriter.SetOKWithData(r.Context(), w, result)
+}

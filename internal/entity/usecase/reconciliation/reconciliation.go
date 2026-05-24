@@ -9,4 +9,5 @@ import (
 type ReconciliationUC interface {
 	Run(ctx context.Context, bankCode, fileID string) (*model.RunReconciliationResponse, error)
 	List(ctx context.Context, param model.ListReconciliationParam) ([]model.ReconciliationResponse, error)
+	GetSummary(ctx context.Context, fileID string) (*model.ReconciliationSummaryResponse, error)
 }

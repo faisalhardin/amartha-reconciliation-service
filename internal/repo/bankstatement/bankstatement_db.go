@@ -43,7 +43,10 @@ func (d *bankStatementDB) InsertBatch(ctx context.Context, stmts []model.MstBank
 
 func (d *bankStatementDB) GetByID(ctx context.Context, id uuid.UUID) (*model.MstBankStatement, error) {
 	var row model.MstBankStatement
-	has, err := d.conn.MasterDB.Context(ctx).ID(id.String()).Get(&row)
+	has, err := d.conn.MasterDB.Context(ctx).
+		Where("id = ?", id.String()).
+		NoAutoCondition().
+		Get(&row)
 	if err != nil {
 		return nil, errors.Wrap(err, wrapErrMsgPrefix+"GetByID")
 	}

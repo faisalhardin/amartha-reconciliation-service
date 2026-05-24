@@ -46,6 +46,7 @@ func (d *transactionDB) GetByID(ctx context.Context, bankCode string, id uuid.UU
 	var row model.MstTransaction
 	has, err := d.conn.MasterDB.Context(ctx).
 		Where("id = ? AND bank_code = ?", id.String(), normalizeBankCode(bankCode)).
+		NoAutoCondition().
 		Get(&row)
 	if err != nil {
 		return nil, errors.Wrap(err, wrapErrMsgPrefix+"GetByID")
