@@ -20,17 +20,17 @@ import (
 const wrapErrMsg = "BankStatementFileUC."
 
 type bankStatementFileUC struct {
-	repo  bankstatementfilerepo.BankStatementFileDB
-	queue *messaging.BankStatementProcessQueue
+	repo bankstatementfilerepo.BankStatementFileDB
+	hub  *messaging.JobQueueHub
 }
 
 func NewBankStatementFileUC(
 	repo bankstatementfilerepo.BankStatementFileDB,
-	queue *messaging.BankStatementProcessQueue,
+	hub *messaging.JobQueueHub,
 ) bankstatementfileuc.BankStatementFileUC {
 	return &bankStatementFileUC{
-		repo:  repo,
-		queue: queue,
+		repo: repo,
+		hub:  hub,
 	}
 }
 
@@ -71,7 +71,7 @@ func (u *bankStatementFileUC) Upload(ctx context.Context, req model.UploadMstBan
 		return nil, errors.Wrap(err, wrapErrMsg+"Upload.Insert")
 	}
 
-	u.queue.Publish(record.ID)
+	u.hub.PublishProcess(record.ID, record.BankCode)
 
 	return &model.UploadMstBankStatementFileResponse{FileID: record.ID}, nil
 }

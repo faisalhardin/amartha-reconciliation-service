@@ -17,6 +17,7 @@ import (
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/library/db/xorm"
 	"github.com/faisalhardin/amartha-reconciliation-service/internal/messaging"
 	bankstatementrepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/bankstatement"
+	bankregistryrepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/bankregistry"
 	bankstatementfilerepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/bankstatementfile"
 	reconciliationrepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/reconciliation"
 	transactionrepo "github.com/faisalhardin/amartha-reconciliation-service/internal/repo/transaction"
@@ -32,8 +33,7 @@ import (
 func gracefulShutdown(
 	apiServer *http.Server,
 	workerCancel context.CancelFunc,
-	processQueue *messaging.BankStatementProcessQueue,
-	reconciliationQueue *messaging.ReconciliationQueue,
+	jobHub *messaging.JobQueueHub,
 	done chan bool,
 ) {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -51,8 +51,7 @@ func gracefulShutdown(
 	}
 
 	workerCancel()
-	processQueue.Close()
-	reconciliationQueue.Close()
+	jobHub.Close()
 
 	log.Println("Server exiting")
 	done <- true
@@ -74,8 +73,8 @@ func main() {
 		}
 	}()
 
-	processQueue := messaging.NewBankStatementProcessQueue(100)
-	reconciliationQueue := messaging.NewReconciliationQueue(100)
+	bankRegistry := bankregistryrepo.New()
+	jobHub := messaging.NewJobQueueHub(bankRegistry, 100)
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	defer workerCancel()
 
@@ -94,13 +93,12 @@ func main() {
 	processUC := bankstatementprocessuc.NewBankStatementProcessUC(
 		bankStatementFileDB,
 		bankStatementDB,
-		reconciliationQueue,
+		jobHub,
 	)
-	worker.StartBankStatementWorker(workerCtx, processQueue, processUC)
-	worker.StartReconciliationWorker(workerCtx, reconciliationQueue, reconciliationUC)
+	worker.StartAll(workerCtx, jobHub, processUC, reconciliationUC)
 
 	transactionUC := transactionuc.NewTransactionUC(transactionDB)
-	bankStatementFileUC := bankstatementfileuc.NewBankStatementFileUC(bankStatementFileDB, processQueue)
+	bankStatementFileUC := bankstatementfileuc.NewBankStatementFileUC(bankStatementFileDB, jobHub)
 	bankStatementUC := bankstatementuc.NewBankStatementUC(bankStatementDB, bankStatementFileDB)
 
 	handlers := &entityhttp.Handlers{
@@ -112,7 +110,7 @@ func main() {
 	apiServer := server.NewServer(handlers)
 
 	done := make(chan bool, 1)
-	go gracefulShutdown(apiServer, workerCancel, processQueue, reconciliationQueue, done)
+	go gracefulShutdown(apiServer, workerCancel, jobHub, done)
 
 	err = apiServer.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {

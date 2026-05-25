@@ -10,6 +10,7 @@ import (
 
 func StartBankStatementWorker(
 	ctx context.Context,
+	bankKey string,
 	queue *messaging.BankStatementProcessQueue,
 	uc bankstatementprocessuc.BankStatementProcessUC,
 ) {
@@ -23,7 +24,7 @@ func StartBankStatementWorker(
 					return
 				}
 				if err := uc.Process(ctx, fileID); err != nil {
-					log.Printf("bank statement worker process error fileId=%s: %v", fileID, err)
+					log.Printf("bank statement worker [%s] process error fileId=%s: %v", bankKey, fileID, err)
 				}
 			}
 		}

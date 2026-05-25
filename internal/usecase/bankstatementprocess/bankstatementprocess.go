@@ -17,20 +17,20 @@ import (
 const wrapErrMsg = "BankStatementProcessUC."
 
 type bankStatementProcessUC struct {
-	fileRepo            bankstatementfilerepo.BankStatementFileDB
-	stmtRepo            bankstatementrepo.BankStatementDB
-	reconciliationQueue *messaging.ReconciliationQueue
+	fileRepo bankstatementfilerepo.BankStatementFileDB
+	stmtRepo bankstatementrepo.BankStatementDB
+	hub      *messaging.JobQueueHub
 }
 
 func NewBankStatementProcessUC(
 	fileRepo bankstatementfilerepo.BankStatementFileDB,
 	stmtRepo bankstatementrepo.BankStatementDB,
-	reconciliationQueue *messaging.ReconciliationQueue,
+	hub *messaging.JobQueueHub,
 ) bankstatementprocessuc.BankStatementProcessUC {
 	return &bankStatementProcessUC{
-		fileRepo:            fileRepo,
-		stmtRepo:            stmtRepo,
-		reconciliationQueue: reconciliationQueue,
+		fileRepo: fileRepo,
+		stmtRepo: stmtRepo,
+		hub:      hub,
 	}
 }
 
@@ -89,7 +89,7 @@ func (u *bankStatementProcessUC) Process(ctx context.Context, fileID string) err
 		return errors.Wrap(err, wrapErrMsg+"Process.UpdateStatus.Completed")
 	}
 
-	u.reconciliationQueue.Publish(fileID)
+	u.hub.PublishReconciliation(fileID, file.BankCode)
 
 	return nil
 }

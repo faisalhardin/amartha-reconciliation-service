@@ -10,6 +10,7 @@ import (
 
 func StartReconciliationWorker(
 	ctx context.Context,
+	bankKey string,
 	queue *messaging.ReconciliationQueue,
 	uc reconciliationuc.ReconciliationUC,
 ) {
@@ -23,7 +24,7 @@ func StartReconciliationWorker(
 					return
 				}
 				if _, err := uc.Run(ctx, "", fileID); err != nil {
-					log.Printf("reconciliation worker error fileId=%s: %v", fileID, err)
+					log.Printf("reconciliation worker [%s] error fileId=%s: %v", bankKey, fileID, err)
 				}
 			}
 		}
